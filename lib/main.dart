@@ -3,27 +3,37 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 
-void main() {
-  runApp(MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  runApp(MyApp(prefs: prefs));
 }
 
 class MyApp extends StatelessWidget {
+  final SharedPreferences prefs;
+
+  MyApp({required this.prefs});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Quiz App',
+      title: 'Your App Title',
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: QuizPage(),
+      home: QuizPage(prefs: prefs),
     );
   }
 }
 
 class QuizPage extends StatefulWidget {
+  final SharedPreferences prefs;
+
+  QuizPage({required this.prefs});
+
   @override
   _QuizPageState createState() => _QuizPageState();
 }
@@ -109,6 +119,7 @@ class _QuizPageState extends State<QuizPage> {
     final directory = await getApplicationDocumentsDirectory();
     final file = File('${directory.path}/quizScore.json');
     file.writeAsStringSync(jsonEncode({"score": score}));
+    await widget.prefs.setBool('quiz_taken', true);
 
     setState(() {
       quizCompleted = true;
