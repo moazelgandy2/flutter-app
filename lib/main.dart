@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -28,7 +29,6 @@ class QuizPage extends StatefulWidget {
 }
 
 class _QuizPageState extends State<QuizPage> {
-  // Quiz data
   List<Map<String, dynamic>> questions = [
     {
       "question": "What is the tallest bridge?",
@@ -59,17 +59,21 @@ class _QuizPageState extends State<QuizPage> {
     },
   ];
 
-  // State variables
   List<int> selectedAnswers = List<int>.filled(3, -1);
   bool quizCompleted = false;
+
+  late Timer timer;
+  int timeLeft = 120;
+
+  get score => null; // 120 seconds = 2 minutes
 
   @override
   void initState() {
     super.initState();
     checkQuizTaken();
+    startTimer();
   }
 
-  // Check if the quiz has been taken before
   void checkQuizTaken() async {
     final directory = await getApplicationDocumentsDirectory();
     final file = File('${directory.path}/quizScore.json');
@@ -80,7 +84,32 @@ class _QuizPageState extends State<QuizPage> {
     }
   }
 
-  // Move to the next question
+  void startTimer() {
+    timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        timeLeft--;
+      });
+      if (timeLeft <= 0) {
+        handleSubmit();
+        timer.cancel();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    timer.cancel();
+    super.dispose();
+  }
+
+  void resetTimer() {
+    timer.cancel();
+    setState(() {
+      timeLeft = 120;
+    });
+    startTimer();
+  }
+
   void handleNext() {
     setState(() {
       if (selectedAnswers.length - 1 > questions.length) return;
@@ -88,7 +117,6 @@ class _QuizPageState extends State<QuizPage> {
     });
   }
 
-  // Move to the previous question
   void handlePrev() {
     setState(() {
       if (selectedAnswers.length == 0) return;
@@ -96,7 +124,6 @@ class _QuizPageState extends State<QuizPage> {
     });
   }
 
-  // Handle answer selection
   void handleAnswer(int? questionIndex, int? answerIndex) {
     if (questionIndex != null && answerIndex != null) {
       setState(() {
@@ -105,7 +132,6 @@ class _QuizPageState extends State<QuizPage> {
     }
   }
 
-  // Handle quiz submission
   void handleSubmit() async {
     int score = 0;
     for (int i = 0; i < questions.length; i++) {
@@ -132,7 +158,13 @@ class _QuizPageState extends State<QuizPage> {
       ),
       body: Center(
         child: quizCompleted
-            ? Text('You have already taken the quiz.')
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('You have already taken the quiz.'),
+                  Text('Your score is: $score'),
+                ],
+              )
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
@@ -150,22 +182,9 @@ class _QuizPageState extends State<QuizPage> {
                       },
                     ),
                   ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: <Widget>[
-                      ElevatedButton(
-                        onPressed: handlePrev,
-                        child: Text('Prev'),
-                      ),
-                      ElevatedButton(
-                        onPressed: handleNext,
-                        child: Text('Next'),
-                      ),
-                      ElevatedButton(
-                        onPressed: handleSubmit,
-                        child: Text('Submit'),
-                      ),
-                    ],
+                  ElevatedButton(
+                    onPressed: handleSubmit,
+                    child: Text('Submit'),
                   ),
                 ],
               ),
@@ -178,14 +197,14 @@ class QuestionWidget extends StatelessWidget {
   final String question;
   final List<Map<String, dynamic>> answers;
   final int selectedAnswer;
-  final void Function(int?)
-      onAnswer; // Update parameter type to accept nullable int
+  final void Function(int?) onAnswer;
 
-  QuestionWidget(
-      {required this.question,
-      required this.answers,
-      required this.selectedAnswer,
-      required this.onAnswer});
+  QuestionWidget({
+    required this.question,
+    required this.answers,
+    required this.selectedAnswer,
+    required this.onAnswer,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -209,8 +228,7 @@ class QuestionWidget extends StatelessWidget {
                 title: Text(answers[index]["answer"]),
                 value: index,
                 groupValue: selectedAnswer,
-                onChanged: (int? answerIndex) =>
-                    onAnswer(answerIndex), // Update parameter type
+                onChanged: (int? answerIndex) => onAnswer(answerIndex),
               ),
             ),
           ),
