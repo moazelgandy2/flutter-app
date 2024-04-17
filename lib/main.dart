@@ -61,38 +61,26 @@ class _QuizPageState extends State<QuizPage> {
 
   List<int> selectedAnswers = List<int>.filled(3, -1);
   bool quizCompleted = false;
-
   late Timer timer;
   int timeLeft = 120;
-
-  get score => null; // 120 seconds = 2 minutes
+  int score = 0; // Declare the score variable
 
   @override
   void initState() {
     super.initState();
-    checkQuizTaken();
     startTimer();
-  }
-
-  void checkQuizTaken() async {
-    final directory = await getApplicationDocumentsDirectory();
-    final file = File('${directory.path}/quizScore.json');
-    if (file.existsSync()) {
-      setState(() {
-        quizCompleted = true;
-      });
-    }
   }
 
   void startTimer() {
     timer = Timer.periodic(Duration(seconds: 1), (timer) {
       setState(() {
-        timeLeft--;
+        if (timeLeft > 0) {
+          timeLeft--;
+        } else {
+          timer.cancel();
+          handleSubmit();
+        }
       });
-      if (timeLeft <= 0) {
-        handleSubmit();
-        timer.cancel();
-      }
     });
   }
 
@@ -100,28 +88,6 @@ class _QuizPageState extends State<QuizPage> {
   void dispose() {
     timer.cancel();
     super.dispose();
-  }
-
-  void resetTimer() {
-    timer.cancel();
-    setState(() {
-      timeLeft = 120;
-    });
-    startTimer();
-  }
-
-  void handleNext() {
-    setState(() {
-      if (selectedAnswers.length - 1 > questions.length) return;
-      selectedAnswers.add(-1);
-    });
-  }
-
-  void handlePrev() {
-    setState(() {
-      if (selectedAnswers.length == 0) return;
-      selectedAnswers.removeLast();
-    });
   }
 
   void handleAnswer(int? questionIndex, int? answerIndex) {
@@ -133,7 +99,6 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   void handleSubmit() async {
-    int score = 0;
     for (int i = 0; i < questions.length; i++) {
       if (selectedAnswers[i] != -1 &&
           questions[i]["answers"][selectedAnswers[i]]["correct"]) {
@@ -162,12 +127,17 @@ class _QuizPageState extends State<QuizPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text('You have already taken the quiz.'),
-                  Text('Your score is: $score'),
+                  Text('Your score is: $score'), // Display the score
                 ],
               )
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
+                  Text(
+                    'Time left: $timeLeft seconds',
+                    style: TextStyle(fontSize: 20),
+                  ),
+                  SizedBox(height: 20),
                   Expanded(
                     child: ListView.builder(
                       itemCount: questions.length,
